@@ -1,0 +1,8 @@
+{
+  "name": "occasioncheck-proxy",
+  "version": "1.0.0",
+  "description": "Proxy en AI handler voor OccasionChecker",
+  "main": "index.html",
+  "author": "",
+  "license": "ISC"
+}

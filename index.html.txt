@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OccasionChecker - Gratis Een Betrouwbare En Onafhankelijke Occasion Advertentie Analyse</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7f8fa;
+            background-image: url('BG.png');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            min-height: 100vh;
+        }
+        .content-card {
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
+            transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+            backdrop-filter: blur(10px);
+        }
+        .content-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        #progress-bar {
+            transition: width 0.3s ease-in-out;
+        }
+        .carousel-slide { display: none; }
+        .carousel-slide.active { display: block; }
+
+        .history-timeline {
+            position: relative;
+            padding-left: 1rem; /* Adjusted padding */
+            margin-top: 1rem;
+        }
+        .history-timeline::before {
+            content: '';
+            position: absolute;
+            left: 0.25rem;
+            top: 0.5rem;
+            bottom: 0.5rem;
+            width: 2px;
+            background-color: #e5e7eb;
+        }
+        .timeline-item {
+            position: relative;
+            padding-left: 1.75rem; /* Make space for the dot */
+            margin-bottom: 1.5rem;
+        }
+        .timeline-item:last-child {
+            margin-bottom: 0;
+        }
+        .timeline-dot {
+            position: absolute;
+            left: -0.25rem;
+            top: 0.375rem;
+            height: 1rem;
+            width: 1rem;
+            border-radius: 9999px;
+            background-color: #3b82f6;
+            border: 2px solid white;
+        }
+         .status-box {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-weight: 600;
+            font-size: 0.875rem;
+         }
+         .status-ok {
+            background-color: #dcfce7;
+            color: #166534;
+         }
+         .status-danger {
+             background-color: #fee2e2;
+             color: #991b1b;
+         }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <div class="container mx-auto p-4 sm:p-6 md:p-8 max-w-4xl">
+        <header class="text-center mb-8">
+            <img src="Logo.png" alt="OccasionCheck Logo" class="mx-auto h-18 w-auto">
+            <p class="text-gray-600 mt-4 max-w-2xl mx-auto">Jouw slimme co-piloot voor het kopen van tweedehands motorvoertuigen. <br> Plak de advertentielink en ontvang direct een onafhankelijke analyse.</p>
+        </header>
+
+        <main>
+            <div class="p-6 rounded-2xl content-card">
+                <div class="flex flex-col sm:flex-row gap-4">
+                    <input type="url" id="ad-url" placeholder="Plak hier de link van de advertentie" class="flex-grow p-3 bg-gray-50 text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition placeholder-gray-500">
+                    <button id="check-button" class="bg-blue-600 text-white font-semibold px-6 py-3 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300/50 transition duration-300">
+                        Analyseer
+                    </button>
+                </div>
+            </div>
+            
+            <p id="slogan-text" class="text-center text-blue-600 font-medium mt-8 mx-auto max-w-lg">Van vraagprijs versus marktwaarde tot een eerlijk aankoopadvies met eindcijfer. Voorkom een miskoop en koop met zekerheid.</p>
+
+            <div id="loading" class="hidden mt-8 max-w-lg mx-auto">
+                <div class="flex justify-between mb-2">
+                    <span id="loading-text" class="text-base font-medium text-blue-700">Analyse starten...</span>
+                    <span id="progress-percentage" class="text-sm font-medium text-blue-700">0%</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2.5">
+                    <div id="progress-bar" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
+                </div>
+            </div>
+            
+            <div id="error" class="hidden mt-8 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg" role="alert">
+                <strong class="font-bold">Fout!</strong>
+                <span class="block sm:inline" id="error-message"></span>
+            </div>
+
+            <div id="ad-title-container" class="hidden mt-8 p-6 rounded-2xl content-card">
+                 <h2 id="ad-title" class="text-xl font-bold text-gray-900"></h2>
+            </div>
+
+            <div id="results" class="mt-8 space-y-6 hidden">
+                <!-- Resultaten worden hier dynamisch ingevoegd -->
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const checkButton = document.getElementById('check-button');
+        const adUrlInput = document.getElementById('ad-url');
+        const loadingDiv = document.getElementById('loading');
+        const resultsDiv = document.getElementById('results');
+        const errorDiv = document.getElementById('error');
+        const errorMessage = document.getElementById('error-message');
+        const adTitleContainer = document.getElementById('ad-title-container');
+        const adTitle = document.getElementById('ad-title');
+        const sloganText = document.getElementById('slogan-text');
+        
+        const progressBar = document.getElementById('progress-bar');
+        const progressPercentage = document.getElementById('progress-percentage');
+        const loadingText = document.getElementById('loading-text');
+        let progressInterval = null;
+
+        checkButton.addEventListener('click', analyzeAd);
+        adUrlInput.addEventListener('keypress', (event) => {
+            if (event.key === 'Enter') {
+                analyzeAd();
+            }
+        });
+
+        function startProgressBarSimulation() {
+            let progress = 0;
+            progressBar.style.width = '0%';
+            progressPercentage.textContent = '0%';
+            loadingText.textContent = 'Analyse starten...';
+
+            progressInterval = setInterval(() => {
+                if (progress < 40) {
+                    progress += Math.random() * 2;
+                    loadingText.textContent = 'Advertentie ophalen & RDW-data verzamelen...';
+                } else if (progress < 85) {
+                    progress += Math.random() * 1.5;
+                    loadingText.textContent = 'AI-analyse uitvoeren...';
+                } else if (progress < 95) {
+                    progress += 0.2;
+                    loadingText.textContent = 'Rapport genereren...';
+                } else {
+                    clearInterval(progressInterval);
+                    loadingText.textContent = 'Analyse afronden...';
+                }
+                
+                progressBar.style.width = Math.min(progress, 95) + '%';
+                progressPercentage.textContent = Math.round(Math.min(progress, 95)) + '%';
+
+            }, 250);
+        }
+
+        async function analyzeAd() {
+            const url = adUrlInput.value.trim();
+            if (!isValidHttpUrl(url)) {
+                showError("Voer een geldige URL in.");
+                return;
+            }
+            
+            clearInterval(progressInterval);
+            startProgressBarSimulation();
+            
+            loadingDiv.classList.remove('hidden');
+            sloganText.classList.add('hidden');
+            resultsDiv.classList.add('hidden');
+            adTitleContainer.classList.add('hidden');
+            errorDiv.classList.add('hidden');
+            resultsDiv.innerHTML = '';
+
+            try {
+                const proxyUrl = `/api/proxy?url=${encodeURIComponent(url)}`;
+                const response = await fetch(proxyUrl);
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => null);
+                    const serverMessage = errorData ? errorData.error : `Onze server antwoordde met een fout: ${response.status}`;
+                    throw new Error(serverMessage);
+                }
+                
+                const data = await response.json();
+                
+                clearInterval(progressInterval);
+                progressBar.style.width = '100%';
+                progressPercentage.textContent = '100%';
+                loadingText.textContent = 'Analyse voltooid!';
+
+                setTimeout(() => {
+                    loadingDiv.classList.add('hidden');
+                    displayResults(data.analysis);
+                }, 500);
+
+            } catch (err) {
+                console.error("Fout tijdens analyse:", err);
+                clearInterval(progressInterval);
+                loadingDiv.classList.add('hidden');
+                showError(err.message || "Er is iets misgegaan bij het ophalen of analyseren van de advertentie.");
+            }
+        }
+        
+        function parsePrice(priceString) {
+            if (!priceString || typeof priceString !== 'string') return null;
+            const cleanedString = priceString.replace(/[€\s\.-]/g, '').replace(/,/, '.');
+            const price = parseFloat(cleanedString);
+            return isNaN(price) ? null : price;
+        }
+        
+        function formatCurrency(number) {
+            return new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR', minimumFractionDigits: 0 }).format(number);
+        }
+
+        function displayResults(data) {
+            if (!data) {
+                showError("De ontvangen data is leeg. Probeer het opnieuw.");
+                return;
+            }
+
+            sloganText.classList.remove('hidden');
+            resultsDiv.classList.remove('hidden');
+
+            if (data.title) {
+                adTitle.textContent = `🏷️ ${data.title}`;
+                adTitleContainer.classList.remove('hidden');
+            }
+
+            // Photo collage
+            let photoContent = '<p class="text-gray-500">Geen afbeeldingen gevonden.</p>';
+            if (data.imageUrls && data.imageUrls.length > 0) {
+                 if (data.imageUrls.length > 1) { 
+                    const slidesHTML = data.imageUrls.map((url, index) => `<div class="carousel-slide ${index === 0 ? 'active' : ''}"><img src="${url}" alt="Foto ${index + 1}" class="w-full h-64 object-cover rounded-lg" onerror="this.onerror=null;this.src='https://placehold.co/600x400';"></div>`).join('');
+                    photoContent = `<div id="image-carousel" class="relative rounded-lg overflow-hidden">${slidesHTML}<button id="prev-btn" class="absolute top-1/2 left-3 p-2 rounded-full bg-black/40 text-white">&lt;</button><button id="next-btn" class="absolute top-1/2 right-3 p-2 rounded-full bg-black/40 text-white">&gt;</button><div id="counter" class="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/60 text-white text-xs px-2 py-1 rounded">1/${data.imageUrls.length}</div></div>`;
+                } else {
+                     photoContent = `<img src="${data.imageUrls[0]}" alt="Foto van de auto" class="w-full h-64 object-cover rounded-lg">`;
+                }
+            }
+            resultsDiv.innerHTML += createCardHTML('📷 Fotocollage', photoContent);
+
+            // Market value
+            let marketValueContent = '<p class="text-gray-500">Geen marktwaarde-analyse beschikbaar.</p>';
+            if (data.marketValue && data.marketValue.explanation && data.marketValue.askingPrice) {
+                const priceText = data.marketValue.askingPrice.includes("(Geschat)") ? "Geschatte Vraagprijs:" : "Vraagprijs (uit advertentie):";
+                let indicatorHTML = '';
+                const explanation = data.marketValue.explanation;
+                const priceRangeRegex = /€\s*([\d\.,-]+)\s*(?:tot|en|-|t\/m)\s*€\s*([\d\.,-]+)/i;
+                const match = explanation.match(priceRangeRegex);
+                let askingPriceNum = parsePrice(data.marketValue.askingPrice);
+                
+                if (match && match.length === 3 && askingPriceNum !== null) {
+                    const lowMarketPrice = parsePrice(match[1]);
+                    const highMarketPrice = parsePrice(match[2]);
+                    if (lowMarketPrice !== null && highMarketPrice !== null && highMarketPrice > lowMarketPrice) {
+                        const range = highMarketPrice - lowMarketPrice;
+                        const positionValue = askingPriceNum - lowMarketPrice;
+                        let percentage = (range === 0) ? 50 : (positionValue / range) * 100;
+                        percentage = Math.max(0, Math.min(100, percentage));
+                        
+                        indicatorHTML = `
+                            <div class="mt-6">
+                                <h4 class="text-sm font-semibold text-gray-700 mb-2">Vraagprijs t.o.v. Geschatte Marktwaarde</h4>
+                                <div class="relative w-full pt-4">
+                                    <div class="h-3 bg-gradient-to-r from-green-400 via-yellow-400 to-red-400 rounded-full"></div>
+                                    <div class="absolute top-2" style="left: ${percentage}%; transform: translateX(-50%);">
+                                        <div class="h-5 w-5 bg-blue-600 border-2 border-white rounded-full shadow-lg"></div>
+                                        <div class="absolute text-center w-24 left-1/2 -translate-x-1/2 mt-2">
+                                            <span class="text-xs font-bold text-blue-600">Vraagprijs</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="flex justify-between text-xs font-bold text-gray-600 mt-8 px-1">
+                                    <span>${formatCurrency(lowMarketPrice)}</span>
+                                    <span>${formatCurrency(highMarketPrice)}</span>
+                                </div>
+                                <div class="flex justify-between text-xs text-gray-500 -mt-1 px-1">
+                                    <span>Marktwaarde (laag)</span>
+                                    <span>Marktwaarde (hoog)</span>
+                                </div>
+                            </div>
+                        `;
+                    }
+                }
+                
+                marketValueContent = `
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4">
+                        <div>
+                            <p class="text-sm text-gray-600">${priceText}</p>
+                            <p class="text-3xl font-bold text-gray-800">${data.marketValue.askingPrice.replace("(Geschat)","")}</p>
+                        </div>
+                        <div class="mt-2 md:mt-0 text-right">
+                            <p class="text-sm text-gray-600">Marktbeoordeling:</p>
+                            <p class="font-semibold text-lg text-blue-600">${data.marketValue.evaluation}</p>
+                        </div>
+                    </div>
+                    <p class="mt-4 text-gray-700">${data.marketValue.explanation}</p>
+                    ${indicatorHTML}
+                `;
+            }
+            resultsDiv.innerHTML += createCardHTML('💰 Vraagprijs & Marktwaarde', marketValueContent);
+            
+            // Specifications
+            let specsContent = '<p class="text-gray-500">Geen specificaties beschikbaar.</p>';
+            if (data.specifications && data.specifications.length > 0) {
+                specsContent = '<ul class="divide-y divide-gray-200">' + data.specifications.map(item => `
+                    <li class="flex justify-between py-2.5">
+                        <span class="font-medium text-gray-600">${item.spec}</span>
+                        <span class="text-gray-800 text-right">${item.value}</span>
+                    </li>
+                `).join('') + '</ul>';
+            }
+            resultsDiv.innerHTML += createCardHTML('📋 Specificaties', specsContent);
+
+            // --- Nieuwe Historie & APK Kaart ---
+            let historyContent = '<p class="text-gray-500">Geen RDW-historie gevonden of geen kenteken in advertentie.</p>';
+            if (data.vehicleHistory && (data.vehicleHistory.basic?.length > 0 || data.vehicleHistory.recalls?.length > 0 || data.vehicleHistory.apk?.length > 0)) {
+                const historyData = data.vehicleHistory;
+
+                const basicHTML = (historyData.basic || []).map(item => `
+                    <div class="flex justify-between items-center py-2.5 border-b">
+                        <span class="font-medium text-gray-600">${item.item}</span>
+                        ${item.item.toLowerCase().includes('gestolen') ? `<span class="status-box ${item.status === 'OK' ? 'status-ok' : 'status-danger'}">${item.status === 'OK' ? '✓' : '!'} <span class="ml-2">${item.value}</span></span>` : `<span class="text-gray-800 text-right font-semibold">${item.value}</span>`}
+                    </div>
+                `).join('');
+
+                const recallsHTML = (historyData.recalls || []).map(recall => `
+                    <div class="timeline-item">
+                         <div class="timeline-dot ${recall.status.toLowerCase().includes('open') ? 'bg-red-500' : 'bg-green-500'}"></div>
+                         <div>
+                            <p class="font-semibold">${recall.description}</p>
+                            <p class="text-sm">Status: <strong>${recall.status}</strong></p>
+                         </div>
+                    </div>
+                `).join('');
+
+                const apkHTML = (historyData.apk || []).map(item => `
+                    <div class="timeline-item">
+                         <div class="timeline-dot"></div>
+                         <div>
+                            <p class="font-semibold text-gray-800">${item.date}</p>
+                            <div class="mt-1 text-sm ${item.issues && item.issues.length > 0 ? 'text-red-700' : 'text-green-700'}">
+                                ${(item.issues && item.issues.length > 0 ? item.issues.map(issue => `<span>- ${issue}</span>`).join('<br>') : '<span>- Geen gebreken geconstateerd</span>')}
+                            </div>
+                         </div>
+                    </div>
+                `).join('');
+
+                historyContent = `
+                    <div>${basicHTML}</div>
+                    ${recallsHTML ? `<h4 class="font-semibold text-lg mt-6 mb-2 text-gray-800">Terugroepacties</h4><div class="history-timeline">${recallsHTML}</div>` : ''}
+                    ${apkHTML ? `<h4 class="font-semibold text-lg mt-6 mb-2 text-gray-800">Recente APK Gebreken</h4><div class="history-timeline">${apkHTML}</div>` : ''}
+                `;
+            }
+            resultsDiv.innerHTML += createCardHTML('📜 Historie & APK (Bron: RDW)', historyContent);
+            
+            let summaryContent = `<p class="text-gray-700 leading-relaxed">${data.adSummary.summary || 'Geen samenvatting beschikbaar.'}</p>`;
+            resultsDiv.innerHTML += createCardHTML('📄 Samenvatting & Betrouwbaarheid', summaryContent);
+
+            let pointsContent = '<p class="text-gray-500">Geen data beschikbaar.</p>';
+            if ((data.strongPoints && data.strongPoints.length > 0) || (data.commonIssues && data.commonIssues.length > 0)) {
+                let strongHTML = (data.strongPoints || []).map(p => `<li class="flex items-start"><span class="text-green-500 mr-2">✓</span>${p}</li>`).join('');
+                let issuesHTML = (data.commonIssues || []).map(p => `<li class="flex items-start"><span class="text-red-500 mr-2">✗</span>${p}</li>`).join('');
+                pointsContent = `<div class="grid grid-cols-1 md:grid-cols-2 gap-6"><div><h4 class="font-semibold text-lg mb-2 text-gray-800">Algemene Sterke Punten</h4><ul class="space-y-2 text-gray-700">${strongHTML}</ul></div><div><h4 class="font-semibold text-lg mb-2 text-gray-800">Algemene Aandachtspunten</h4><ul class="space-y-2 text-gray-700">${issuesHTML}</ul></div></div>`;
+            }
+            resultsDiv.innerHTML += createCardHTML('👍👎 Sterke & Zwakke Punten', pointsContent);
+
+            let adviceContent = `<p class="text-gray-700 leading-relaxed">${data.negotiationAdvice || 'Geen koopadvies beschikbaar.'}</p>`;
+            resultsDiv.innerHTML += createCardHTML('🤝 Koop- & Onderhandelingsadvies', adviceContent);
+
+            let ratingContent = '<p class="text-gray-500">Geen eindbeoordeling beschikbaar.</p>';
+            if (data.rating && data.rating.score) {
+                ratingContent = `<div class="flex flex-col md:flex-row items-center gap-6"><div class="md:w-3/4"><p class="text-gray-700 text-center md:text-left">${data.rating.reasoning || ''}</p></div><div class="md:w-1/4 text-center"><h4 class="text-xl font-bold text-gray-900 mb-2">Score:</h4><p class="text-5xl font-bold text-blue-600">${data.rating.score}<span class="text-3xl text-gray-500">/10</span></p></div></div>`;
+            }
+            resultsDiv.innerHTML += createCardHTML('⭐ Eindbeoordeling van deze deal', ratingContent);
+
+            const disclaimerHTML = `<div class="text-center px-4 pt-4"><h4 class="font-bold text-gray-700 text-sm">Disclaimer</h4><p class="text-xs text-gray-500 mt-2 leading-relaxed max-w-2xl mx-auto">De analyse en informatieverzameling van OccasionChecker wordt zo zorgvuldig mogelijk gedaan, maar is uitsluitend bedoeld als informatief hulpmiddel; de verzamelde informatie wordt geanalyseerd door AI. Het vervangt niet de noodzaak van een eigen, grondige inspectie en een proefrit. U bent te allen tijde zelf volledig verantwoordelijk voor uw aankoopbeslissing. OccasionChecker kan niet aansprakelijk worden gesteld voor eventuele onjuistheden in de analyse, misinformatie, of een uiteindelijke miskoop.</p></div>`;
+            resultsDiv.innerHTML += disclaimerHTML;
+
+            // Carousel Logic
+            if (data.imageUrls && data.imageUrls.length > 1) {
+                const carousel = document.getElementById('image-carousel');
+                const slides = carousel.querySelectorAll('.carousel-slide');
+                const prevBtn = document.getElementById('prev-btn');
+                const nextBtn = document.getElementById('next-btn');
+                const counter = document.getElementById('counter');
+                let currentSlide = 0;
+
+                const showSlide = (n) => {
+                    if(!slides || slides.length === 0) return;
+                    slides.forEach(slide => slide.classList.remove('active'));
+                    currentSlide = (n + slides.length) % slides.length;
+                    if(counter) counter.textContent = `${currentSlide + 1} / ${slides.length}`;
+                };
+                
+                showSlide(0);
+
+                if(prevBtn && nextBtn) {
+                    prevBtn.addEventListener('click', () => showSlide(currentSlide - 1));
+                    nextBtn.addEventListener('click', () => showSlide(currentSlide + 1));
+                }
+            }
+        }
+        
+        function createCardHTML(title, content) {
+            return `
+                <div class="p-6 rounded-2xl content-card">
+                    <h3 class="text-xl font-bold text-gray-900 mb-4 border-b border-gray-200 pb-2">${title}</h3>
+                    <div>${content}</div>
+                </div>
+            `;
+        }
+
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorDiv.classList.remove('hidden');
+        }
+
+        function isValidHttpUrl(string) {
+            let url;
+            try { url = new URL(string); } catch (_) { return false; }
+            return url.protocol === "http:" || url.protocol === "https:";
+        }
+    </script>
+</body>
+</html>
+
